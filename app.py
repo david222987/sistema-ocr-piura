@@ -2,7 +2,8 @@ import os
 import re
 import zipfile
 import platform
-from flask import Flask, request, render_template, send_file, jsonify, redirect, url_for
+import gc
+from flask import Flask, request, render_template, send_file, jsonify
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import pytesseract
 from pdf2image import convert_from_path
@@ -17,9 +18,9 @@ else:
     POPPLER_PATH = None  # En Linux/Render ya está instalado globalmente
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER']    = 'uploads'
-app.config['PROCESSED_FOLDER'] = 'processed'
-app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB
+app.config['UPLOAD_FOLDER']      = 'uploads'
+app.config['PROCESSED_FOLDER']   = 'processed'
+app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB ← reducido
 
 ALLOWED_EXTENSIONS = {'pdf'}
 
@@ -141,14 +142,18 @@ def process_pdf(filepath, original_filename):
         "text_preview":   ""
     }
     try:
+        # ✅ FIX 1: dpi reducido a 150 y solo 2 páginas para ahorrar memoria
         images = convert_from_path(
-            filepath, dpi=200, first_page=1, last_page=3,
+            filepath, dpi=150, first_page=1, last_page=2,
             poppler_path=POPPLER_PATH
         )
         full_text = ""
         for img in images:
             page_text = pytesseract.image_to_string(img, lang='spa+eng', config='--psm 3')
             full_text += page_text + "\n"
+            img.close()   # ✅ FIX 2: liberar memoria de cada imagen
+            del img        # ✅ FIX 2: eliminar referencia
+        gc.collect()       # ✅ FIX 2: forzar limpieza de memoria
 
         result["text_preview"] = full_text[:500].replace('\n', ' ')
 
@@ -196,10 +201,10 @@ def upload():
     saved = []
     for f in files:
         if f and allowed_file(f.filename):
-            filename = secure_filename(f.filename)
-            path     = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            filename  = secure_filename(f.filename)
+            path      = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             base, ext = os.path.splitext(filename)
-            counter  = 1
+            counter   = 1
             while os.path.exists(path):
                 path = os.path.join(app.config['UPLOAD_FOLDER'], f"{base}_{counter}{ext}")
                 counter += 1
@@ -212,7 +217,8 @@ def upload():
     results    = []
     used_names = set()
 
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    # ✅ FIX 3: max_workers=1 para no saturar memoria en servidor gratuito
+    with ThreadPoolExecutor(max_workers=1) as executor:
         future_to_file = {
             executor.submit(process_pdf, path, orig): (path, orig)
             for path, orig in saved
