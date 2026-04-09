@@ -24,4 +24,4 @@ RUN mkdir -p uploads processed
 EXPOSE 8000
 
 # Arrancar con gunicorn
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--workers", "2"]
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--timeout", "300", "--graceful-timeout", "300"]
