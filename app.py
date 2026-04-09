@@ -15,12 +15,12 @@ if platform.system() == 'Windows':
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
     POPPLER_PATH = r'C:\poppler-25.12.0\Library\bin'
 else:
-    POPPLER_PATH = None  # En Linux/Render ya está instalado globalmente
+    POPPLER_PATH = None
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER']      = 'uploads'
 app.config['PROCESSED_FOLDER']   = 'processed'
-app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB ← reducido
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB máximo
 
 ALLOWED_EXTENSIONS = {'pdf'}
 
@@ -29,7 +29,7 @@ def allowed_file(filename):
 
 @app.errorhandler(RequestEntityTooLarge)
 def archivo_muy_grande(e):
-    return jsonify({"error": "Los archivos superan el límite. Súbelos en lotes más pequeños."}), 413
+    return jsonify({"error": "Archivo muy grande. Máximo 50MB por lote."}), 413
 
 def clean_name(nombre_limpio, categoria_limpia):
     nombre_limpio    = re.sub(r'[^\w\s]', '', nombre_limpio,    flags=re.UNICODE).strip()
@@ -76,7 +76,7 @@ def extract_name_from_text(text):
         print(f"[P2] Categoría: {categoria} | Nombre: {nombre}")
         return clean_name(nombre, categoria)
 
-    # Patrón 3: líneas originales del texto
+    # Patrón 3: líneas originales
     lineas_originales = [l.strip() for l in text.split('\n') if l.strip()]
     idx_contratacion  = None
     for i, linea in enumerate(lineas_originales):
@@ -106,17 +106,14 @@ def extract_name_from_text(text):
         for j in range(idx_contratacion + 1, min(idx_contratacion + 6, len(lineas_originales))):
             linea = lineas_originales[j].strip()
             linea = re.sub(r'\s*[–—-]\s*', ' ', linea)
-
             if re.search(r'REFERENCIA', linea, re.IGNORECASE):
                 break
-
             palabras_linea = linea.upper().split()
             es_categoria   = any(w in palabras_excluir for w in palabras_linea)
             es_nombre      = (
                 re.match(r'^[A-ZÁÉÍÓÚÑ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ]{2,})+\.?$', linea)
                 and not es_categoria
             )
-
             if es_nombre:
                 nombre = linea.rstrip('.')
                 break
@@ -142,22 +139,35 @@ def process_pdf(filepath, original_filename):
         "text_preview":   ""
     }
     try:
-        # ✅ FIX 1: dpi reducido a 150 y solo 2 páginas para ahorrar memoria
+        print(f">>> Iniciando OCR: {original_filename}")
+
+        # ✅ dpi=120 y solo 1 página — mínimo consumo de memoria
         images = convert_from_path(
-            filepath, dpi=150, first_page=1, last_page=2,
-            poppler_path=POPPLER_PATH
+            filepath,
+            dpi=120,
+            first_page=1,
+            last_page=1,
+            poppler_path=POPPLER_PATH,
+            fmt='jpeg',
+            jpegopt={"quality": 70, "progressive": True}
         )
+
         full_text = ""
         for img in images:
-            page_text = pytesseract.image_to_string(img, lang='spa+eng', config='--psm 3')
+            # ✅ Solo español, más rápido
+            page_text = pytesseract.image_to_string(
+                img, lang='spa',
+                config='--psm 6 --oem 1'
+            )
             full_text += page_text + "\n"
-            img.close()   # ✅ FIX 2: liberar memoria de cada imagen
-            del img        # ✅ FIX 2: eliminar referencia
-        gc.collect()       # ✅ FIX 2: forzar limpieza de memoria
+            img.close()
+            del img
+        del images
+        gc.collect()
 
-        result["text_preview"] = full_text[:500].replace('\n', ' ')
+        result["text_preview"] = full_text[:300].replace('\n', ' ')
+        print(f">>> Texto extraído ({len(full_text)} chars)")
 
-        print(f"\n>>> Procesando: {original_filename}")
         name = extract_name_from_text(full_text)
         if not name:
             name = "Sin_Nombre_" + os.path.splitext(original_filename)[0]
@@ -165,8 +175,10 @@ def process_pdf(filepath, original_filename):
         result["detected_name"] = name
         result["status"]        = "success"
         result["message"]       = "OCR completado"
+        print(f">>> Nombre detectado: {name}")
 
     except Exception as e:
+        print(f">>> ERROR: {str(e)}")
         result["message"]       = f"Error: {str(e)}"
         result["detected_name"] = "Error_" + os.path.splitext(original_filename)[0]
 
@@ -217,14 +229,11 @@ def upload():
     results    = []
     used_names = set()
 
-    # ✅ FIX 3: max_workers=1 para no saturar memoria en servidor gratuito
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future_to_file = {
-            executor.submit(process_pdf, path, orig): (path, orig)
-            for path, orig in saved
-        }
-        for future in as_completed(future_to_file):
-            results.append(future.result())
+    # ✅ Procesar uno por uno secuencialmente
+    for path, orig in saved:
+        res = process_pdf(path, orig)
+        results.append(res)
+        gc.collect()
 
     for res in results:
         final_name = get_unique_filename(
@@ -266,12 +275,10 @@ def download_zip():
     files = [f for f in os.listdir(processed_folder) if f.endswith('.pdf')]
     if not files:
         return "No hay archivos para descargar", 404
-
     zip_path = os.path.join(processed_folder, 'documentos_renombrados.zip')
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
         for f in files:
             zf.write(os.path.join(processed_folder, f), f)
-
     return send_file(zip_path, as_attachment=True, download_name='documentos_renombrados.zip')
 
 @app.route('/clear', methods=['POST'])
