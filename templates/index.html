@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digital Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+[data-theme="dark"] {
+  --bg:           #0b1120;
+  --bg2:          #0f1829;
+  --bg3:          #141f35;
+  --border:       #1e2d4a;
+  --border2:      #2a3f63;
+  --text:         #e2eaf8;
+  --text2:        #7a96c2;
+  --text3:        #3d5a8a;
+  --accent:       #4f8cff;
+  --accent2:      #3a6fd8;
+  --accent-glow:  rgba(79,140,255,0.18);
+  --accent-bg:    rgba(79,140,255,0.08);
+  --success:      #34d399;
+  --success-bg:   rgba(52,211,153,0.08);
+  --error:        #f87171;
+  --error-bg:     rgba(248,113,113,0.08);
+  --shadow:       0 2px 12px rgba(0,0,0,0.5), 0 0 0 1px rgba(79,140,255,0.06);
+  --shadow-lg:    0 8px 32px rgba(0,0,0,0.6), 0 0 40px rgba(79,140,255,0.08);
+  --toggle-knob:  #0b1120;
+  --toggle-track: #4f8cff;
+}
+[data-theme="light"] {
+  --bg:           #f0f4ff;
+  --bg2:          #ffffff;
+  --bg3:          #e8eeff;
+  --border:       #c8d8f8;
+  --border2:      #a8c0f0;
+  --text:         #0d1b3e;
+  --text2:        #3a5a9a;
+  --text3:        #7a9acc;
+  --accent:       #2563eb;
+  --accent2:      #1d4ed8;
+  --accent-glow:  rgba(37,99,235,0.15);
+  --accent-bg:    rgba(37,99,235,0.06);
+  --success:      #16a34a;
+  --success-bg:   rgba(22,163,74,0.06);
+  --error:        #dc2626;
+  --error-bg:     rgba(220,38,38,0.06);
+  --shadow:       0 2px 12px rgba(37,99,235,0.08), 0 0 0 1px rgba(37,99,235,0.08);
+  --shadow-lg:    0 8px 32px rgba(37,99,235,0.12);
+  --toggle-knob:  #ffffff;
+  --toggle-track: #2563eb;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Oxanium', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+  transition: background 0.35s ease, color 0.35s ease;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--accent-glow) 1px, transparent 1px),
+    linear-gradient(90deg, var(--accent-glow) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+.app {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── HEADER ── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 52px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 0 24px var(--accent-glow), 0 4px 12px rgba(0,0,0,0.3);
+  flex-shrink: 0;
+}
+
+.brand-text h1 {
+  font-family: 'Oxanium', sans-serif;
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  line-height: 1;
+  /* Glow on dark */
+  text-shadow: 0 0 30px var(--accent-glow);
+}
+
+[data-theme="light"] .brand-text h1 { text-shadow: none; }
+
+.brand-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--text3);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 0;
+}
+
+.toggle-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  min-width: 36px;
+  transition: color 0.2s;
+}
+
+.toggle-track {
+  width: 42px;
+  height: 23px;
+  background: var(--toggle-track);
+  border-radius: 99px;
+  position: relative;
+  transition: background 0.3s;
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.toggle-knob {
+  width: 17px;
+  height: 17px;
+  background: var(--toggle-knob);
+  border-radius: 50%;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+[data-theme="light"] .toggle-knob { transform: translateX(19px); }
+
+/* ── STEPS ── */
+.steps {
+  display: flex;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text3);
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.step-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text3);
+  text-transform: uppercase;
+  transition: color 0.3s;
+  white-space: nowrap;
+}
+
+.step-item.active .step-num {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  box-shadow: 0 0 14px var(--accent-glow);
+}
+
+.step-item.active .step-label { color: var(--accent); }
+
+.step-item.done .step-num {
+  background: var(--success);
+  border-color: var(--success);
+  color: white;
+  box-shadow: 0 0 10px rgba(52,211,153,0.3);
+}
+
+.step-item.done .step-label { color: var(--success); }
+
+.step-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border2);
+  margin: 0 10px;
+  max-width: 60px;
+}
+
+/* ── CARD ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+  transition: background 0.3s, border-color 0.3s;
+}
+
+/* ── DROP ZONE ── */
+.drop-zone {
+  border: 1.5px dashed var(--border2);
+  border-radius: 12px;
+  padding: 44px 24px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  background: var(--bg3);
+}
+
+.drop-zone:hover,
+.drop-zone.dragover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  box-shadow: 0 0 0 4px var(--accent-glow);
+}
+
+.drop-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.drop-icon { font-size: 2.4rem; margin-bottom: 12px; display: block; }
+
+.drop-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 5px;
+}
+
+.drop-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text3);
+}
+
+/* ── CHIPS ── */
+.chips-wrap {
+  display: none;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text2);
+}
+
+.chip-remove {
+  background: none;
+  border: none;
+  color: var(--error);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.chip-remove:hover { opacity: 1; }
+
+/* ── ACTIONS ── */
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-family: 'Oxanium', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent2);
+  transform: translateY(-1px);
+  box-shadow: 0 0 28px var(--accent-glow);
+}
+
+.btn-primary:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border2);
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-success {
+  background: var(--success);
+  color: #0b1120;
+  font-weight: 700;
+}
+
+.btn-success:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+/* ── PROGRESS ── */
+#progress-section { display: none; }
+
+.progress-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px 28px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.progress-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.progress-msg {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text3);
+}
+
+.progress-track {
+  height: 4px;
+  background: var(--border2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #7ab4ff);
+  border-radius: 99px;
+  width: 0%;
+  transition: width 0.4s ease;
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* ── RESULTS ── */
+#results-section { display: none; }
+
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.results-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+
+.badges { display: flex; gap: 6px; }
+
+.badge {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 500;
+  border: 1px solid;
+}
+
+.badge-total { color: var(--text2);   border-color: var(--border2); background: var(--bg3); }
+.badge-ok    { color: var(--success); border-color: var(--success); background: var(--success-bg); }
+.badge-err   { color: var(--error);   border-color: var(--error);   background: var(--error-bg); }
+
+/* ── FILE CARDS ── */
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.file-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  animation: fadeUp 0.25s ease forwards;
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+@keyframes fadeUp { to { opacity:1; transform:translateY(0); } }
+
+.file-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-glow);
+}
+
+.file-card.is-error { border-color: var(--error); background: var(--error-bg); }
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-ok  { background: var(--success); box-shadow: 0 0 6px rgba(52,211,153,0.5); }
+.dot-err { background: var(--error);   box-shadow: 0 0 6px rgba(248,113,113,0.5); }
+
+.file-info { flex: 1; min-width: 0; }
+
+.file-from {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--text3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-to {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ocr-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.dl-btn {
+  padding: 6px 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  font-family: 'Oxanium', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dl-btn:hover {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* ── DOWNLOAD BAR ── */
+.dl-bar {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: var(--shadow);
+}
+
+.dl-bar-text h4 {
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.dl-bar-text p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--text3);
+}
+
+.dl-bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 999;
+  transform: translateY(60px);
+  opacity: 0;
+  transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: var(--shadow-lg);
+  max-width: 340px;
+}
+
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.t-ok  { border-color: var(--success); }
+.toast.t-err { border-color: var(--error); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-icon">📄</div>
+      <div class="brand-text">
+        <h1>Digital Docs</h1>
+        <div class="brand-sub">OCR · Renombrado automático · PDF</div>
+      </div>
+    </div>
+
+    <div class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema">
+      <span class="toggle-label" id="theme-label">DARK</span>
+      <div class="toggle-track">
+        <div class="toggle-knob"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step-item active" id="step1">
+      <div class="step-num">1</div>
+      <span class="step-label">Subir PDFs</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" id="step2">
+      <div class="step-num">2</div>
+      <span class="step-label">Procesar OCR</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" id="step3">
+      <div class="step-num">3</div>
+      <span class="step-label">Descargar</span>
+    </div>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="card" id="upload-section">
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" multiple accept=".pdf">
+      <span class="drop-icon">🗂</span>
+      <div class="drop-title">Arrastra tus PDFs aquí</div>
+      <div class="drop-sub">o haz clic para seleccionar · Solo archivos .pdf</div>
+    </div>
+
+    <div class="chips-wrap" id="chips-wrap">
+      <div id="chips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="process-btn" disabled onclick="processFiles()">
+        ⚡ Procesar con OCR
+      </button>
+      <button class="btn btn-ghost" onclick="clearAll()">Limpiar</button>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div id="progress-section">
+    <div class="progress-card">
+      <div class="progress-top">
+        <div class="progress-title">
+          <span class="spinner"></span>
+          Procesando archivos
+        </div>
+        <div class="progress-msg" id="progress-msg">Iniciando OCR…</div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results-section">
+    <div class="results-header">
+      <div class="results-title">Archivos procesados</div>
+      <div class="badges" id="badges"></div>
+    </div>
+
+    <div class="file-list" id="file-list"></div>
+
+    <div class="dl-bar">
+      <div class="dl-bar-text">
+        <h4>Descargar todos</h4>
+        <p>Empaquetados en un archivo ZIP renombrado</p>
+      </div>
+      <div class="dl-bar-actions">
+        <a href="/download-zip" class="btn btn-success">⬇ Descargar ZIP</a>
+        <button class="btn btn-ghost" onclick="resetApp()">🔄 Nuevo lote</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── THEME ──
+  const root = document.documentElement;
+
+  function toggleTheme() {
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    document.getElementById('theme-label').textContent = next.toUpperCase();
+    localStorage.setItem('dd-theme', next);
+  }
+
+  const saved = localStorage.getItem('dd-theme');
+  if (saved) {
+    root.setAttribute('data-theme', saved);
+    document.getElementById('theme-label').textContent = saved.toUpperCase();
+  }
+
+  // ── FILES ──
+  let selectedFiles = [];
+  const dropZone   = document.getElementById('drop-zone');
+  const fileInput  = document.getElementById('file-input');
+  const processBtn = document.getElementById('process-btn');
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    addFiles(Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.pdf')));
+  });
+  fileInput.addEventListener('change', () => { addFiles(Array.from(fileInput.files)); fileInput.value = ''; });
+
+  function addFiles(files) {
+    files.forEach(f => {
+      if (!selectedFiles.find(s => s.name === f.name && s.size === f.size))
+        selectedFiles.push(f);
+    });
+    renderChips();
+  }
+
+  function removeFile(i) { selectedFiles.splice(i, 1); renderChips(); }
+
+  function renderChips() {
+    const wrap  = document.getElementById('chips-wrap');
+    const inner = document.getElementById('chips');
+    if (!selectedFiles.length) { wrap.style.display = 'none'; processBtn.disabled = true; return; }
+    wrap.style.display = 'flex';
+    processBtn.disabled = false;
+    inner.innerHTML = selectedFiles.map((f, i) => `
+      <span class="chip">📄 ${f.name}
+        <button class="chip-remove" onclick="removeFile(${i})">×</button>
+      </span>`).join('');
+  }
+
+  // ── PROCESS ──
+  async function processFiles() {
+    if (!selectedFiles.length) return;
+    document.getElementById('progress-section').style.display = 'block';
+    document.getElementById('results-section').style.display  = 'none';
+    processBtn.disabled = true;
+    setStep(2);
+    animateProgress();
+
+    const fd = new FormData();
+    selectedFiles.forEach(f => fd.append('files', f));
+
+    try {
+      const res  = await fetch('/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+
+      if (data.error) {
+        showToast('❌ ' + data.error, 'err');
+        document.getElementById('progress-section').style.display = 'none';
+        processBtn.disabled = false;
+        return;
+      }
+
+      document.getElementById('progress-fill').style.width = '100%';
+      document.getElementById('progress-msg').textContent  = 'Completado';
+
+      setTimeout(() => {
+        document.getElementById('progress-section').style.display = 'none';
+        renderResults(data);
+        setStep(3);
+        showToast(`✅ Procesados ${data.summary.success} de ${data.summary.total} archivos`, 'ok');
+      }, 500);
+
+    } catch (err) {
+      showToast('❌ Error: ' + err.message, 'err');
+      document.getElementById('progress-section').style.display = 'none';
+      processBtn.disabled = false;
+    }
+  }
+
+  function animateProgress() {
+    const msgs = ['Convirtiendo a imágenes…','Ejecutando OCR…','Analizando texto…','Extrayendo nombres…','Renombrando archivos…'];
+    let pct = 0, mi = 0;
+    window._pi = setInterval(() => {
+      pct = Math.min(pct + Math.random() * 14, 91);
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('progress-msg').textContent  = msgs[mi++ % msgs.length];
+    }, 900);
+  }
+
+  function renderResults({ results, summary }) {
+    clearInterval(window._pi);
+    document.getElementById('badges').innerHTML = `
+      <span class="badge badge-total">Total: ${summary.total}</span>
+      <span class="badge badge-ok">✓ ${summary.success}</span>
+      ${summary.errors > 0 ? `<span class="badge badge-err">✗ ${summary.errors}</span>` : ''}
+    `;
+    document.getElementById('file-list').innerHTML = results.map((r, i) => `
+      <div class="file-card ${r.status !== 'success' ? 'is-error' : ''}" style="animation-delay:${i*0.04}s">
+        <span class="status-dot ${r.status === 'success' ? 'dot-ok' : 'dot-err'}"></span>
+        <div class="file-info">
+          <div class="file-from">📄 ${r.original}</div>
+          <div class="file-to">
+            → ${r.final_filename || 'Error'}
+            ${r.status === 'success' ? '<span class="ocr-tag">OCR</span>' : ''}
+          </div>
+        </div>
+        ${r.final_filename ? `
+          <a href="/download/${encodeURIComponent(r.final_filename)}" class="dl-btn">⬇ Descargar</a>
+        ` : ''}
+      </div>`).join('');
+    document.getElementById('results-section').style.display = 'block';
+  }
+
+  function setStep(active) {
+    [1,2,3].forEach(i => {
+      const el = document.getElementById(`step${i}`);
+      el.classList.remove('active','done');
+      if (i < active) el.classList.add('done');
+      else if (i === active) el.classList.add('active');
+    });
+  }
+
+  function clearAll() {
+    selectedFiles = [];
+    renderChips();
+    document.getElementById('chips-wrap').style.display = 'none';
+  }
+
+  async function resetApp() {
+    await fetch('/clear', { method: 'POST' });
+    clearAll();
+    document.getElementById('results-section').style.display = 'none';
+    processBtn.disabled = true;
+    setStep(1);
+    showToast('🔄 Listo para un nuevo lote', 'ok');
+  }
+
+  function showToast(msg, type = 'ok') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast t-${type} show`;
+    setTimeout(() => t.classList.remove('show'), 4000);
+  }
+</script>
+</body>
+</html>
